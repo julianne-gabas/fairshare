@@ -128,6 +128,10 @@ function GroupPage() {
                                     <span className="expense-description">{expense.description}</span>
                                     <span className="expense-meta">
                                         {expense.paidByUsername} paid on {expense.expenseDate}
+                                        {/* #13 AC3: marks a generated entry and links back to its recurring expense */}
+                                        {expense.recurringExpenseId && (
+                                            <> · <a href={`#recurring-expense-${expense.recurringExpenseId}`}>Recurring</a></>
+                                        )}
                                     </span>
                                     <span className="expense-amount">
                                         {money(group.baseCurrency, expense.amount)}
@@ -148,7 +152,7 @@ function GroupPage() {
                     ) : (
                         <ul className="expense-list">
                             {recurringExpenses.map((recurringExpense) => (
-                                <li key={recurringExpense.id}>
+                                <li key={recurringExpense.id} id={`recurring-expense-${recurringExpense.id}`}>
                                     <span className="expense-description">{recurringExpense.description}</span>
                                     <span className="expense-meta">
                                         {FREQUENCY_LABELS[recurringExpense.frequency]} · paid by {recurringExpense.paidByUsername} · starts {recurringExpense.startDate}

@@ -129,6 +129,33 @@ it('shows an empty state and a working link when a group has no recurring expens
     expect(link).toHaveAttribute('href', '/groups/1/recurring-expenses/new');
 });
 
+it('#13 AC3: marks a generated expense as recurring and links back to its recurring expense', async () => {
+    getExpenses.mockResolvedValue({
+        expenses: [
+            {
+                id: 3, groupId: 1, paidByUserId: 1, paidByUsername: 'alice',
+                amount: '500.00', description: 'Rent', expenseDate: '2026-09-01',
+                createdAt: '2026-09-01T00:00:00Z', recurringExpenseId: 7,
+            },
+            {
+                id: 4, groupId: 1, paidByUserId: 2, paidByUsername: 'bob',
+                amount: '20.00', description: 'Taxi', expenseDate: '2026-08-18',
+                createdAt: '2026-08-18T00:00:00Z', recurringExpenseId: null,
+            },
+        ],
+    });
+
+    renderPage();
+
+    await screen.findByText('Rent');
+    const link = screen.getByRole('link', { name: 'Recurring' });
+    expect(link).toHaveAttribute('href', '#recurring-expense-7');
+
+    // The manually recorded expense has no recurring marker.
+    const taxiRow = screen.getByText('Taxi').closest('li');
+    expect(taxiRow).not.toHaveTextContent('Recurring');
+});
+
 it('AC1: shows what each member is owed or owes', async () => {
     getGroupMembers.mockResolvedValue({
         members: [
