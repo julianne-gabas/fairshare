@@ -222,6 +222,9 @@ public class ExpenseService {
                 expenseShareRepository.findByExpenseId(expense.getId()).stream()
                     .map(share -> share.getUser().getId())
                     .sorted()
-                    .toList());
+                    .toList(),
+                // AC3: lets the frontend mark this entry as recurring and link back to its source.
+                // Safe on a lazy proxy - the id is known without initializing the full entity.
+                expense.getRecurringExpense() != null ? expense.getRecurringExpense().getId() : null);
     }
 }

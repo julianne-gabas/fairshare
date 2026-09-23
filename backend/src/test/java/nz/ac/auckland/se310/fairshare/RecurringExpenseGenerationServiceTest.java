@@ -243,6 +243,11 @@ class RecurringExpenseGenerationServiceTest {
         List<Expense> expenses = expenseRepository.findByGroupIdOrderByExpenseDateDesc(groupId);
         assertThat(expenses).hasSize(1);
         assertThat(expenses.get(0).getRecurringExpense().getId()).isEqualTo(recurring.id());
+
+        // #13 AC3: the same link is visible through the expense history endpoint's response.
+        assertThat(expenseService.getExpensesForGroup(groupId, aliceId))
+                .extracting(ExpenseResponse::recurringExpenseId)
+                .containsExactly(recurring.id());
     }
 
     private Map<Long, BigDecimal> balances() {
