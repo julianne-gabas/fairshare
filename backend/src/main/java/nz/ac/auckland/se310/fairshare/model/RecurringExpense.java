@@ -96,22 +96,14 @@ public class RecurringExpense {
         }
     }
 
-    public void end() {
-        active = false;
-    }
-
     public Long getId() { return id; }
     public ExpenseGroup getGroup() { return group; }
     public User getPaidBy() { return paidBy; }
-    public void setPaidBy(User paidBy) { this.paidBy = paidBy; }
     public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
     public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
     public Frequency getFrequency() { return frequency; }
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getEndDate() { return endDate; }
-    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     public int getOccurrenceCount() { return occurrenceCount; }
     public LocalDate getNextDueDate() { return nextDueDate; }
     public boolean isActive() { return active; }
