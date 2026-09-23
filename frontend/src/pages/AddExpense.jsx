@@ -1,42 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getGroupMembers } from '../api/groups';
 import { createExpense } from '../api/expenses';
 import ExpenseForm from '../components/ExpenseForm';
+import { today } from '../utils/dates';
+import { validateSharedExpenseFields } from '../utils/expenseValidation';
+import { useGroupMembersForm } from '../utils/useGroupMembersForm';
 import './AddExpense.css';
 
-// Built from local date because toISOString() reports the UTC date and
-// would give yesterday for the first hours of a New Zealand day.
-function today() {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${now.getFullYear()}-${month}-${day}`;
-}
-
 function validate({ amount, description, paidByUserId, expenseDate, participantUserIds }) {
-    const errors = {};
-
-    if (amount.trim() === '') {
-        errors.amount = 'Amount is required';                          // AC2
-    } else if (!(Number(amount) > 0)) {
-        errors.amount = 'Amount must be a positive number';            // AC3
-    }
-
-    if (description.trim() === '') {
-        errors.description = 'Description is required';                // AC2
-    }
-
-    if (paidByUserId === '') {
-        errors.paidByUserId = 'Payer is required';                     // AC2
-    }
+    const errors = validateSharedExpenseFields({ amount, description, paidByUserId, participantUserIds });
 
     if (expenseDate > today()) {
         errors.expenseDate = 'Expense date cannot be in the future';   // AC6
-    }
-
-    if (!participantUserIds || participantUserIds.length === 0) {
-        errors.participantUserIds = 'At least one participant is required';   // AC4
     }
 
     return errors;
@@ -45,34 +20,12 @@ function validate({ amount, description, paidByUserId, expenseDate, participantU
 function AddExpense() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [members, setMembers] = useState([]);
+    const { members, paidByUserId, setPaidByUserId, loading, errors, setErrors } = useGroupMembersForm(id);
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
-    const [paidByUserId, setPaidByUserId] = useState('');
     const [expenseDate, setExpenseDate] = useState(today());   // AC6
-    const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [errors, setErrors] = useState({});
     const [participantUserIds, setParticipantUserIds] = useState([]);  // #8 AC3
-
-    useEffect(() => {
-        async function loadMembers() {
-            const result = await getGroupMembers(id);
-            if (result.error) {
-                setErrors({ form: result.error });                     // AC8
-            } else {
-                setMembers(result.members);                            // AC5
-                const self = result.members.find((member) => member.currentUser);
-                setPaidByUserId(String((self ?? result.members[0])?.userId ?? ''));
-            }
-            setLoading(false);
-        }
-
-        loadMembers().catch(() => {
-            setErrors({ form: 'Could not load group members.' });
-            setLoading(false);
-        });
-    }, [id]);
 
     async function handleSubmit(event) {
         event.preventDefault();
