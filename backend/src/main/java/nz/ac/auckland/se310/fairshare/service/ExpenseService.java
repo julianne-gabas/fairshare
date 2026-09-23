@@ -8,6 +8,7 @@ import nz.ac.auckland.se310.fairshare.exception.InvalidPayerException;
 import nz.ac.auckland.se310.fairshare.model.Expense;
 import nz.ac.auckland.se310.fairshare.model.ExpenseGroup;
 import nz.ac.auckland.se310.fairshare.model.ExpenseShare;
+import nz.ac.auckland.se310.fairshare.model.RecurringExpense;
 import nz.ac.auckland.se310.fairshare.model.UserInGroup;
 import nz.ac.auckland.se310.fairshare.repository.ExpenseRepository;
 import nz.ac.auckland.se310.fairshare.repository.ExpenseShareRepository;
@@ -114,6 +115,25 @@ public class ExpenseService {
         }
 
         expenseRepository.save(expense);
+    }
+
+    /**
+     * Creates one occurrence of a recurring expense (AC2). Reuses the same equal-split logic as
+     * a manually recorded expense; the caller has already resolved the payer and participants
+     * against the group's current membership.
+     */
+    @Transactional
+    public ExpenseResponse createRecurringOccurrence(RecurringExpense recurringExpense, UserInGroup payer,
+                                                       List<UserInGroup> members, LocalDate occurrenceDate) {
+        BigDecimal amount = recurringExpense.getAmount();
+
+        Expense expense = new Expense(recurringExpense.getGroup(), payer.getUser(), amount,
+                recurringExpense.getDescription(), occurrenceDate, recurringExpense);
+        Expense saved = expenseRepository.save(expense);
+
+        applyEqualSplit(payer, amount, members, saved);
+
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)

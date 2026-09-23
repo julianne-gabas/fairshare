@@ -83,16 +83,31 @@ public class RecurringExpense {
     }
 
     /**
-     * Records that the occurrence currently due has been generated, and advances the schedule
-     * to the following one. Ends the series instead if that next occurrence would fall after
-     * endDate (AC4).
+     * The date of the nth occurrence (0-indexed, so occurrenceDate(0) is startDate). Monthly
+     * occurrences are always startDate + n months rather than repeatedly adding a month to the
+     * previous occurrence, so a short month (Jan 31 -> Feb 28) clamps only that one occurrence
+     * instead of shifting every later one (Mar is still the 31st, not the 28th).
      */
-    public void advanceAfterGenerating(LocalDate nextOccurrenceDate) {
+    public LocalDate occurrenceDate(int occurrenceIndex) {
+        return switch (frequency) {
+            case WEEKLY -> startDate.plusWeeks(occurrenceIndex);
+            case FORTNIGHTLY -> startDate.plusWeeks(occurrenceIndex * 2L);
+            case MONTHLY -> startDate.plusMonths(occurrenceIndex);
+        };
+    }
+
+    /**
+     * Records that the occurrence currently due (nextDueDate) has been generated, and advances
+     * the schedule to the following one. Ends the series instead if that next occurrence would
+     * fall after endDate (AC4).
+     */
+    public void advanceAfterGenerating() {
         occurrenceCount++;
-        if (endDate != null && nextOccurrenceDate.isAfter(endDate)) {
+        LocalDate next = occurrenceDate(occurrenceCount);
+        if (endDate != null && next.isAfter(endDate)) {
             active = false;
         } else {
-            nextDueDate = nextOccurrenceDate;
+            nextDueDate = next;
         }
     }
 
