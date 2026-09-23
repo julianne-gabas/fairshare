@@ -28,6 +28,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,7 +39,7 @@ import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Import(TestCurrentUserConfig.class)
+@Import({TestCurrentUserConfig.class, TestClockConfig.class})
 class RecurringExpenseIntegrationTest {
 
     @Container
@@ -58,6 +59,7 @@ class RecurringExpenseIntegrationTest {
     @Autowired RecurringExpenseParticipantRepository participantRepository;
     @Autowired UserRepository userRepository;
     @Autowired Validator validator;
+    @Autowired TestClockConfig.MutableClock clock;
 
     private Long aliceId;
     private Long bobId;
@@ -70,6 +72,10 @@ class RecurringExpenseIntegrationTest {
         participantRepository.deleteAll();
         recurringExpenseRepository.deleteAll();
         groupRepository.deleteAll();
+
+        // Keeps "today" safely before every fixture's start date, since creating a recurring
+        // expense now also generates anything already due (AC2) - these tests aren't about that.
+        clock.setInstant(LocalDate.of(2025, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
 
         aliceId = userRepository.findByEmail("alice@test.com").orElseThrow().getId();
         bobId = userRepository.findByEmail("bob@test.com").orElseThrow().getId();

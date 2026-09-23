@@ -74,6 +74,10 @@ class RecurringExpenseGenerationServiceTest {
         recurringExpenseRepository.deleteAll();
         groupRepository.deleteAll();
 
+        // Keeps "today" safely before every fixture's start date, so creating a recurring expense
+        // doesn't itself trigger generation - each test controls that explicitly via generateAsOf.
+        clock.setInstant(LocalDate.of(2025, 1, 1).atStartOfDay(ZONE).toInstant());
+
         aliceId = userRepository.findByEmail("alice@test.com").orElseThrow().getId();
         bobId = userRepository.findByEmail("bob@test.com").orElseThrow().getId();
         memberIds = List.of(aliceId, bobId);
@@ -129,6 +133,31 @@ class RecurringExpenseGenerationServiceTest {
         int generated = generateAsOf(start.minusDays(1));
 
         assertThat(generated).isZero();
+        assertThat(expenseService.getExpensesForGroup(groupId, aliceId)).isEmpty();
+    }
+
+    @Test
+    void ac2_generatesImmediatelyOnCreateWhenTheStartDateIsAlreadyDue() {
+        // "Today" is well after the chosen start date, as if someone backdated it on purpose.
+        clock.setInstant(LocalDate.of(2026, 4, 15).atStartOfDay(ZONE).toInstant());
+
+        RecurringExpenseResponse created = createMonthlyRecurringExpense(LocalDate.of(2026, 1, 1), null);
+
+        assertThat(created.nextDueDate()).isEqualTo(LocalDate.of(2026, 5, 1));
+        assertThat(expenseService.getExpensesForGroup(groupId, aliceId))
+                .extracting(ExpenseResponse::expenseDate)
+                .containsExactlyInAnyOrder(
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1),
+                        LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 1));
+    }
+
+    @Test
+    void ac2_doesNotGenerateOnCreateWhenTheStartDateIsInTheFuture() {
+        clock.setInstant(LocalDate.of(2026, 1, 1).atStartOfDay(ZONE).toInstant());
+
+        RecurringExpenseResponse created = createMonthlyRecurringExpense(LocalDate.of(2026, 6, 1), null);
+
+        assertThat(created.nextDueDate()).isEqualTo(LocalDate.of(2026, 6, 1));
         assertThat(expenseService.getExpensesForGroup(groupId, aliceId)).isEmpty();
     }
 

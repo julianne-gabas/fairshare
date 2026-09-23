@@ -27,18 +27,23 @@ public class RecurringExpenseService {
     private final RecurringExpenseRepository recurringExpenseRepository;
     private final ExpenseGroupRepository groupRepository;
     private final RecurringExpenseParticipantRepository participantRepository;
+    private final RecurringExpenseGenerationService generationService;
 
     public RecurringExpenseService(RecurringExpenseRepository recurringExpenseRepository,
                                     ExpenseGroupRepository groupRepository,
-                                    RecurringExpenseParticipantRepository participantRepository) {
+                                    RecurringExpenseParticipantRepository participantRepository,
+                                    RecurringExpenseGenerationService generationService) {
         this.recurringExpenseRepository = recurringExpenseRepository;
         this.groupRepository = groupRepository;
         this.participantRepository = participantRepository;
+        this.generationService = generationService;
     }
 
     /**
      * Validates that the current user belongs to the group, confirms the payer is a member, and
-     * saves the recurring expense so the scheduler can start generating expenses from its start date.
+     * saves the recurring expense. Immediately generates any occurrence already due (e.g. a start
+     * date in the past), rather than waiting for the next scheduled run; the daily job then takes
+     * over for occurrences that fall due afterwards.
      */
     @Transactional
     public RecurringExpenseResponse createRecurringExpense(Long groupId, CreateRecurringExpenseRequest request, Long currentUserId) {
@@ -60,6 +65,8 @@ public class RecurringExpenseService {
         RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
 
         saveParticipants(saved, members);
+
+        generationService.generateDueOccurrencesFor(saved); // AC2
 
         return toResponse(saved);
     }

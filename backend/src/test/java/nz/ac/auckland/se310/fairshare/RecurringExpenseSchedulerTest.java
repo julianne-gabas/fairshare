@@ -57,6 +57,10 @@ class RecurringExpenseSchedulerTest {
         participantRepository.deleteAll();
         recurringExpenseRepository.deleteAll();
         groupRepository.deleteAll();
+
+        // Keeps "today" safely before the fixture's start date, so creating the recurring expense
+        // doesn't itself trigger generation - this test controls that explicitly below.
+        clock.setInstant(LocalDate.of(2025, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     @Test

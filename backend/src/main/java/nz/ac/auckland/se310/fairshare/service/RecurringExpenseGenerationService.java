@@ -50,6 +50,16 @@ public class RecurringExpenseGenerationService {
         return generated;
     }
 
+    /**
+     * Generates any occurrences already due for a single recurring expense, using the same
+     * backfill logic as the daily job. Called right after creation so a start date that's today
+     * or earlier produces its expenses immediately, rather than waiting for the next scheduled run.
+     */
+    @Transactional
+    public int generateDueOccurrencesFor(RecurringExpense recurringExpense) {
+        return generateDueOccurrences(recurringExpense, LocalDate.now(clock));
+    }
+
     private int generateDueOccurrences(RecurringExpense recurringExpense, LocalDate today) {
         ExpenseGroup group = recurringExpense.getGroup();
         UserInGroup payer = group.getMember(recurringExpense.getPaidBy().getId());
