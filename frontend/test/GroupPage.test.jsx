@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import GroupPage from '../src/pages/GroupPage.jsx';
 import { getGroup, getGroupBalances, getGroupMembers } from '../src/api/groups';
 import { getExpenses } from '../src/api/expenses';
+import { getRecurringExpenses } from '../src/api/recurringExpenses';
 
 vi.mock('../src/api/groups', () => ({
     createGroup: vi.fn(),
@@ -16,6 +17,10 @@ vi.mock('../src/api/groups', () => ({
 
 vi.mock('../src/api/expenses', () => ({
     getExpenses: vi.fn(),
+}));
+
+vi.mock('../src/api/recurringExpenses', () => ({
+    getRecurringExpenses: vi.fn(),
 }));
 
 const GROUP = {
@@ -31,6 +36,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     getGroup.mockResolvedValue(GROUP);
     getExpenses.mockResolvedValue({ expenses: [] });
+    getRecurringExpenses.mockResolvedValue({ recurringExpenses: [] });
     getGroupBalances.mockResolvedValue([]);
     getGroupMembers.mockResolvedValue({
         members: [
@@ -87,6 +93,40 @@ it('AC7: lists each expense with amount, description, payer and date', async () 
     expect(screen.getByText('Taxi')).toBeInTheDocument();
     expect(screen.getByText('alice paid on 2026-08-16')).toBeInTheDocument();
     expect(screen.getByText('NZD 10.00')).toBeInTheDocument();
+});
+
+it('#13 AC1, AC4: lists each recurring expense with its frequency, payer and active/ended status', async () => {
+    getRecurringExpenses.mockResolvedValue({
+        recurringExpenses: [
+            {
+                id: 1, groupId: 1, paidByUserId: 1, paidByUsername: 'alice',
+                amount: '500.00', description: 'Rent', frequency: 'MONTHLY',
+                startDate: '2026-01-01', endDate: null, nextDueDate: '2026-09-01', active: true,
+            },
+            {
+                id: 2, groupId: 1, paidByUserId: 2, paidByUsername: 'bob',
+                amount: '15.00', description: 'Netflix', frequency: 'MONTHLY',
+                startDate: '2026-01-01', endDate: '2026-03-01', nextDueDate: '2026-03-01', active: false,
+            },
+        ],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Rent')).toBeInTheDocument();
+    expect(screen.getByText(/Monthly.*paid by alice.*starts 2026-01-01.*Active/)).toBeInTheDocument();
+    expect(screen.getByText('NZD 500.00')).toBeInTheDocument();
+
+    expect(screen.getByText('Netflix')).toBeInTheDocument();
+    expect(screen.getByText(/Monthly.*paid by bob.*starts 2026-01-01.*ends 2026-03-01.*Ended/)).toBeInTheDocument();
+});
+
+it('shows an empty state and a working link when a group has no recurring expenses', async () => {
+    renderPage();
+
+    expect(await screen.findByText('No recurring expenses yet.')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Add recurring expense' });
+    expect(link).toHaveAttribute('href', '/groups/1/recurring-expenses/new');
 });
 
 it('AC1: shows what each member is owed or owes', async () => {
