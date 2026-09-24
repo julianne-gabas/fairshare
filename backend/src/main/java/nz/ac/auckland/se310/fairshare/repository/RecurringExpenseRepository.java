@@ -16,4 +16,7 @@ public interface RecurringExpenseRepository extends JpaRepository<RecurringExpen
 
     // AC2: active recurring expenses whose next occurrence is due on or before the given date
     List<RecurringExpense> findByActiveTrueAndNextDueDateLessThanEqual(LocalDate date);
+
+    // A member can't leave the group while they're still the payer of an active recurring expense in it
+    boolean existsByGroupIdAndPaidBy_IdAndActiveTrue(Long groupId, Long userId);
 }

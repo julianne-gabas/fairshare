@@ -6,6 +6,7 @@ import nz.ac.auckland.se310.fairshare.dto.ExpenseResponse;
 import nz.ac.auckland.se310.fairshare.dto.GroupMemberResponse;
 import nz.ac.auckland.se310.fairshare.dto.RecurringExpenseResponse;
 import nz.ac.auckland.se310.fairshare.model.Expense;
+import nz.ac.auckland.se310.fairshare.model.ExpenseGroup;
 import nz.ac.auckland.se310.fairshare.model.RecurringExpense;
 import nz.ac.auckland.se310.fairshare.repository.ExpenseGroupRepository;
 import nz.ac.auckland.se310.fairshare.repository.ExpenseRepository;
@@ -159,6 +160,35 @@ class RecurringExpenseGenerationServiceTest {
 
         assertThat(created.nextDueDate()).isEqualTo(LocalDate.of(2026, 6, 1));
         assertThat(expenseService.getExpensesForGroup(groupId, aliceId)).isEmpty();
+    }
+
+    @Test
+    void skipsARecurringExpenseWhoseParticipantHasLeftTheGroupButStillGeneratesTheRest() {
+        LocalDate start = LocalDate.of(2026, 1, 1);
+        RecurringExpenseResponse valid = createMonthlyRecurringExpense(start, null);
+        RecurringExpenseResponse invalid = recurringExpenseService.createRecurringExpense(groupId,
+                new CreateRecurringExpenseRequest(new BigDecimal("50.00"), "Gym", bobId, memberIds,
+                        RecurringExpense.Frequency.MONTHLY, start, null), aliceId);
+
+        // Simulates bob having left the group after "Gym" was created. The normal removal API now
+        // blocks this (a separate fix), so this bypasses it directly to test generation's own
+        // defence against a recurring expense left referencing someone no longer in the group.
+        ExpenseGroup group = groupRepository.findByIdAndMembersUserId(groupId, aliceId).orElseThrow();
+        group.removeMember(group.getMember(bobId));
+        groupRepository.save(group);
+
+        int generated = generateAsOf(start);
+
+        assertThat(generated).isEqualTo(1); // only the still-valid "Rent" generated
+        assertThat(expenseService.getExpensesForGroup(groupId, aliceId))
+                .extracting(ExpenseResponse::description)
+                .containsExactly(RENT);
+
+        // The invalid recurring expense is left untouched (still active, still due) rather than
+        // corrupted or silently disabled.
+        RecurringExpense invalidEntity = recurringExpenseRepository.findById(invalid.id()).orElseThrow();
+        assertThat(invalidEntity.isActive()).isTrue();
+        assertThat(invalidEntity.getNextDueDate()).isEqualTo(start);
     }
 
     @Test
