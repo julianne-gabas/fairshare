@@ -36,6 +36,7 @@ function GroupPage() {
     const [recurringExpenses, setRecurringExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [recurringExpensesError, setRecurringExpensesError] = useState(null);
     const [notFound, setNotFound] = useState(false);
 
     // Fetch the group, expenses, and members whenever the route changes so the page stays in sync.
@@ -55,13 +56,20 @@ function GroupPage() {
                     getRecurringExpenses(id),
                 ]);
 
-                if (expenseResult.error || memberResult.error || recurringExpenseResult.error) {
-                    setError(expenseResult.error || memberResult.error || recurringExpenseResult.error);
+                if (expenseResult.error || memberResult.error) {
+                    setError(expenseResult.error || memberResult.error);
                     return;
                 }
                 setExpenses(expenseResult.expenses);   // AC7
                 setMembers(memberResult.members);      // AC1
-                setRecurringExpenses(recurringExpenseResult.recurringExpenses);   // #13 AC1
+
+                // A failure loading recurring expenses shouldn't hide the rest of the group page -
+                // it's shown inline in that section instead (bug report from teammate review).
+                if (recurringExpenseResult.error) {
+                    setRecurringExpensesError(recurringExpenseResult.error);
+                } else {
+                    setRecurringExpenses(recurringExpenseResult.recurringExpenses);   // #13 AC1
+                }
             } catch (err) {
                 console.error('Failed to load group', err);
                 setError('Could not load this group. Please try again.');
@@ -146,8 +154,10 @@ function GroupPage() {
                     <h2>Recurring expenses</h2>
                     <Link className="action" to={`/groups/${id}/recurring-expenses/new`}>Add recurring expense</Link>
 
-                    {/* #13 AC1, AC4: every recurring expense in the group, marked active or ended */}
-                    {recurringExpenses.length === 0 ? (
+                    {recurringExpensesError ? (
+                        <span className="error">{recurringExpensesError}</span>
+                    ) : recurringExpenses.length === 0 ? (
+                        /* #13 AC1, AC4: every recurring expense in the group, marked active or ended */
                         <p className="empty">No recurring expenses yet.</p>
                     ) : (
                         <ul className="expense-list">

@@ -156,6 +156,30 @@ it('#13 AC3: marks a generated expense as recurring and links back to its recurr
     expect(taxiRow).not.toHaveTextContent('Recurring');
 });
 
+it('a failed recurring-expenses request does not hide the rest of the group page', async () => {
+    getRecurringExpenses.mockResolvedValue({ error: 'Could not load recurring expenses.' });
+    getExpenses.mockResolvedValue({
+        expenses: [
+            {
+                id: 1, groupId: 1, paidByUserId: 1, paidByUsername: 'alice',
+                amount: '10.00', description: 'Taxi', expenseDate: '2026-08-16',
+                createdAt: '2026-08-16T00:00:00Z',
+            },
+        ],
+    });
+
+    renderPage();
+
+    // Main group information is still visible...
+    expect(await screen.findByText('Flat 3')).toBeInTheDocument();
+    expect(screen.getByText('Taxi')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Manage members' })).toBeInTheDocument();
+
+    // ...and only the recurring-expenses section shows an error.
+    expect(screen.getByText('Could not load recurring expenses.')).toBeInTheDocument();
+    expect(screen.queryByText('No recurring expenses yet.')).not.toBeInTheDocument();
+});
+
 it('AC1: shows what each member is owed or owes', async () => {
     getGroupMembers.mockResolvedValue({
         members: [
