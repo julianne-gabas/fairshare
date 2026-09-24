@@ -7,8 +7,18 @@ import { validateSharedExpenseFields } from '../utils/expenseValidation';
 import { useGroupMembersForm } from '../utils/useGroupMembersForm';
 import './AddExpense.css';
 
+// Generation splits into whole cents, so a fractional cent (e.g. 10.005) can't be split exactly.
+function hasMoreThanTwoDecimalPlaces(amount) {
+    const decimalIndex = amount.indexOf('.');
+    return decimalIndex !== -1 && amount.length - decimalIndex - 1 > 2;
+}
+
 function validate({ amount, description, paidByUserId, frequency, startDate, endDate, participantUserIds }) {
     const errors = validateSharedExpenseFields({ amount, description, paidByUserId, participantUserIds });
+
+    if (!errors.amount && hasMoreThanTwoDecimalPlaces(amount.trim())) {
+        errors.amount = 'Amounts should only have up to 2 decimal places.';
+    }
 
     if (frequency === '') {
         errors.frequency = 'Frequency is required';

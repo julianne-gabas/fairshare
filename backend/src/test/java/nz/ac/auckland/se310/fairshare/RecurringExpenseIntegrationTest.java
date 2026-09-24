@@ -166,7 +166,28 @@ class RecurringExpenseIntegrationTest {
         assertThat(violations(new CreateRecurringExpenseRequest(
                 new BigDecimal("0.004"), RENT, aliceId, memberIds, RecurringExpense.Frequency.WEEKLY, START_DATE, null)))
                 .extractingByKey(AMOUNT_FIELD, list(String.class))
-                .containsExactly("Amount must be at least 0.01");
+                .contains("Amount must be at least 0.01");
+    }
+
+    @Test
+    void ac5_rejectsAmountsWithMoreThanTwoDecimalPlaces() {
+        assertThat(violations(new CreateRecurringExpenseRequest(
+                new BigDecimal("10.005"), RENT, aliceId, memberIds, RecurringExpense.Frequency.WEEKLY, START_DATE, null)))
+                .extractingByKey(AMOUNT_FIELD, list(String.class))
+                .containsExactly("Amounts should only have up to 2 decimal places.");
+
+        assertThat(violations(new CreateRecurringExpenseRequest(
+                new BigDecimal("0.001"), RENT, aliceId, memberIds, RecurringExpense.Frequency.WEEKLY, START_DATE, null)))
+                .extractingByKey(AMOUNT_FIELD, list(String.class))
+                .contains("Amounts should only have up to 2 decimal places.");
+
+        assertThat(violations(new CreateRecurringExpenseRequest(
+                new BigDecimal("10.00"), RENT, aliceId, memberIds, RecurringExpense.Frequency.WEEKLY, START_DATE, null)))
+                .isEmpty();
+
+        assertThat(violations(new CreateRecurringExpenseRequest(
+                new BigDecimal("10.01"), RENT, aliceId, memberIds, RecurringExpense.Frequency.WEEKLY, START_DATE, null)))
+                .isEmpty();
     }
 
     @Test

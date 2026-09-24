@@ -1,6 +1,7 @@
 package nz.ac.auckland.se310.fairshare.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +18,8 @@ public record CreateRecurringExpenseRequest(
         @Positive(message = "Amount must be a positive number")
         // Amounts are stored to the cent, so anything under one cent would round away to 0.00.
         @DecimalMin(value = "0.01", message = "Amount must be at least 0.01")
+        // Generation splits into whole cents; a fractional cent (e.g. 10.005) can't be split exactly.
+        @Digits(integer = 8, fraction = 2, message = "Amounts should only have up to 2 decimal places.")
         BigDecimal amount,
 
         @NotBlank(message = "Description is required")

@@ -104,6 +104,43 @@ it('AC5: rejects a zero, negative or non-numeric amount', async () => {
     expect(createRecurringExpense).not.toHaveBeenCalled();
 });
 
+it('AC5: rejects amounts with more than two decimal places', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const amount = await screen.findByLabelText('Amount');
+    await user.type(screen.getByLabelText('Description'), 'Rent');
+    await user.selectOptions(screen.getByLabelText('Frequency'), 'MONTHLY');
+    await user.click(screen.getByRole('checkbox', { name: 'alice' }));
+
+    for (const value of ['10.005', '0.001']) {
+        await user.clear(amount);
+        await user.type(amount, value);
+        await user.click(screen.getByRole('button', { name: 'Save recurring expense' }));
+
+        expect(screen.getByText('Amounts should only have up to 2 decimal places.')).toBeInTheDocument();
+    }
+    expect(createRecurringExpense).not.toHaveBeenCalled();
+});
+
+it.each([
+    // The number input normalises 10.00 to 10; the backend stores it at two decimal places.
+    ['10.00', '10'],
+    ['10.01', '10.01'],
+])('AC5: accepts a validly formatted amount of %s', async (typed, submitted) => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(await screen.findByLabelText('Amount'), typed);
+    await user.type(screen.getByLabelText('Description'), 'Rent');
+    await user.selectOptions(screen.getByLabelText('Frequency'), 'MONTHLY');
+    await user.click(screen.getByRole('checkbox', { name: 'alice' }));
+    await user.click(screen.getByRole('button', { name: 'Save recurring expense' }));
+
+    expect(createRecurringExpense).toHaveBeenCalledWith('1', expect.objectContaining({ amount: submitted }));
+    expect(screen.queryByText('Amounts should only have up to 2 decimal places.')).not.toBeInTheDocument();
+});
+
 it('AC5: rejects an end date before the start date', async () => {
     const user = userEvent.setup();
     renderPage();
